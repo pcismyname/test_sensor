@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gyro</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="accelerometer.html">Accelerometer</a></li>
+            <li><a href="gyro.html">Gyro</a></li>
+        </ul>
+    </nav>
+    <h1>Gyroscope Data</h1>
+    <input type="file" id="gyroFileInput" accept=".csv">
+    <label for="gyroThresholdInput">Angular Displacement Threshold (radians):</label>
+    <input type="number" id="gyroThresholdInput" value="0.1" step="0.01">
+    <button id="gyroProcessButton">Process</button>
+    <canvas id="gyroChart" width="800" height="400"></canvas>
+    <p id="gyroMovementCount">Movement Count: 0</p>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <script src="gyro.js"></script>
+</body>
+</html>
