@@ -1,4 +1,5 @@
 let accelerationData = [];
+let multiplier = 1; // Adjust this multiplier based on your data characteristics
 
 document.getElementById('fileInput').addEventListener('change', function(event) {
     const file = event.target.files[0];
@@ -18,15 +19,14 @@ document.getElementById('processButton').addEventListener('click', function() {
         alert('Please upload a CSV file first.');
         return;
     }
-    const multiplier = 1.5; // Adjust this multiplier based on your data characteristics
 
-    // const threshold = parseFloat(document.getElementById('thresholdInput').value);
+    multiplier = parseFloat(document.getElementById('thresholdInput').value);
     const result = integrate(accelerationData);
-    const threshold = calculateThreshold(result.position, multiplier);
 
-    displayResult(accelerationData, result);
-    const movementCount = countPeaks(result.position, threshold);
-    document.getElementById('movementCount').innerText = 'Movement Count: ' + movementCount;
+    displayResult(accelerationData, result, multiplier);
+    // const data = countPeaks(result.position, threshold);
+    // const movementCount = data.peakCount;
+    // document.getElementById('movementCount').innerText = 'Movement Count: ' + movementCount;
 });
 
 function parseCSV(text) {
@@ -115,24 +115,25 @@ function calculateThreshold(positionData, multiplier) {
 
 function countPeaks(positionData, threshold) {
     let peakCount = 0;
-    let inPeak = false;
-    console.log(threshold);
-    for (let i = 1; i < positionData.length; i++) {
-        const positionDataY = positionData[i].y;
+    const peaks = [];
 
-        if (!inPeak && positionDataY > threshold) {
-            inPeak = true;
+    for (let i = 1; i < positionData.length - 1; i++) {
+        const previousY = positionData[i - 1].y;
+        const currentY = positionData[i].y;
+        const nextY = positionData[i + 1].y;
+
+        // Detect peak
+        if (currentY > previousY && currentY > nextY && currentY > threshold) {
             peakCount++;
-        } else if (inPeak && positionDataY < threshold) {
-            inPeak = false;
+            peaks.push({ x: i, y: currentY });
         }
     }
 
-    return peakCount;
+    return { peakCount, peaks };
 }
 
 
-function displayResult(original, result) {
+function displayResult(original, result, multiplier) {
     const ctx = document.getElementById('chart').getContext('2d');
     if (Chart.getChart('chart')) {
         Chart.getChart('chart').destroy();
@@ -154,6 +155,13 @@ function displayResult(original, result) {
 
     const displacementData = result.displacement;
     const accelerationMagnitudeData = result.accelerationMagnitude;
+
+    // Calculate threshold and count peaks
+    const threshold = calculateThreshold(result.position, multiplier);
+    const peakResults = countPeaks(result.position, threshold);
+    const peakValuesY = peakResults.peaks;
+    document.getElementById('movementCount').innerText = 'Movement Count: ' + peakResults.peakCount;
+
 
     new Chart(ctx, {
         type: 'line',
@@ -222,9 +230,18 @@ function displayResult(original, result) {
                 },
                 {
                     label: 'Acceleration Magnitude',
-                    borderColor: 'rgb(0,191,255)ข ขช ',
+                    borderColor: 'rgb(0, 191, 255)',
                     fill: false,
                     data: accelerationMagnitudeData
+                },
+                {
+                    label: 'Peaks Y',
+                    borderColor: 'rgb(255, 0, 0)',
+                    backgroundColor: 'rgb(255, 0, 0)',
+                    fill: false,
+                    pointRadius: 10,
+                    data: peakValuesY,
+                    showLine: false
                 }
             ]
         },
@@ -270,3 +287,4 @@ function displayResult(original, result) {
         }
     });
 }
+

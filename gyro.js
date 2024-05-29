@@ -1,4 +1,5 @@
 let gyroData = [];
+let multiplier = 1; // Adjust this multiplier based on your data characteristics
 
 document.getElementById('gyroFileInput').addEventListener('change', function(event) {
     const file = event.target.files[0];
@@ -18,14 +19,16 @@ document.getElementById('gyroProcessButton').addEventListener('click', function(
         alert('Please upload a CSV file first.');
         return;
     }
-    //const threshold = parseFloat(document.getElementById('gyroThresholdInput').value);
+    multiplier = parseFloat(document.getElementById('gyroThresholdInput').value);
     const result = integrateGyro(gyroData);
-    displayGyroResult(gyroData, result);
     // const movementCount = countGyroMovements(result.angle, threshold);
-    const multiplier = 2; // Adjust this multiplier based on your data characteristics
     const threshold = calculateThreshold(result.angle, multiplier);
     console.log(threshold);
-    const movementCount = countMovements(result.angle, threshold);
+    const data = countValley(result.angle, threshold);
+    const movementCount = data.movementCount;
+    displayGyroResult(gyroData, result);
+
+
     document.getElementById('gyroMovementCount').innerText = 'Movement Count: ' + movementCount;
 });
 
@@ -79,18 +82,19 @@ function integrateGyro(gyroData) {
 //     return movementCount;
 // }
 
-function calculateThreshold(accelerationData, multiplier) {
-    const slopes = accelerationData.map((acc, i, arr) => i > 0 ? Math.abs(acc.y - arr[i - 1].y) : 0).slice(1);
+function calculateThreshold(angleData, multiplier) {
+    const slopes = angleData.map((ang, i, arr) => i > 0 ? Math.abs(ang.y - arr[i - 1].y) : 0).slice(1);
     const meanSlope = slopes.reduce((sum, slope) => sum + slope, 0) / slopes.length;
     const stdDevSlope = Math.sqrt(slopes.map(x => Math.pow(x - meanSlope, 2)).reduce((sum, x) => sum + x, 0) / slopes.length);
     return stdDevSlope * multiplier;
 }
 
-function countMovements(angle, threshold) {
-
+function countValley(angle, threshold) {
+    console.log(angle);
     // Now, detect local minima in the Angle Y data
     let movementCount = 0;
     let descending = false;
+    const valleys = [];
     // console.log(angle)
     for (let i = 1; i < angle.length - 1; i++) {
         // Calculate the slope
@@ -104,11 +108,12 @@ function countMovements(angle, threshold) {
         // Check for valley (significant local minimum)
         if (descending && slope > threshold) {
             movementCount += 1;
+            valleys.push({ x: i, y: angle[i].y });
             descending = false;
         }
     }
 
-    return movementCount;
+    return {valleys ,movementCount };
 }
 
 
@@ -128,6 +133,9 @@ function displayGyroResult(original, result) {
 
     const originalDataZ = original.map(d => d.z);
     const angleDataZ = result.angle.map(d => d.z);
+
+    const threshold = calculateThreshold(result.angle, multiplier);
+    const data  = countValley(result.angle, threshold);
 
     new Chart(ctx, {
         type: 'line',
@@ -169,6 +177,15 @@ function displayGyroResult(original, result) {
                     borderColor: 'rgb(192, 192, 75)',
                     fill: false,
                     data: angleDataZ
+                },
+                {
+                    label: 'Vallry Y',
+                    borderColor: 'rgb(255, 0, 0)',
+                    backgroundColor: 'rgb(255, 0, 0)',
+                    fill: false,
+                    pointRadius: 10,
+                    data: data.valleys,
+                    showLine: false
                 }
             ]
         },
