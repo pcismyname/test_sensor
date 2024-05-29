@@ -18,11 +18,14 @@ document.getElementById('processButton').addEventListener('click', function() {
         alert('Please upload a CSV file first.');
         return;
     }
+    const multiplier = 1.5; // Adjust this multiplier based on your data characteristics
 
-    const threshold = parseFloat(document.getElementById('thresholdInput').value);
+    // const threshold = parseFloat(document.getElementById('thresholdInput').value);
     const result = integrate(accelerationData);
+    const threshold = calculateThreshold(result.position, multiplier);
+
     displayResult(accelerationData, result);
-    const movementCount = countMovements(result.position, threshold);
+    const movementCount = countPeaks(result.position, threshold);
     document.getElementById('movementCount').innerText = 'Movement Count: ' + movementCount;
 });
 
@@ -100,6 +103,34 @@ function countMovements(positionData, threshold) {
 
     return movementCount;
 }
+
+function calculateThreshold(positionData, multiplier) {
+    let sum = 0;
+    for (let i = 0; i < positionData.length; i++) {
+        sum += Math.abs(positionData[i].y);
+    }
+    const average = sum / positionData.length;
+    return average * multiplier;
+}
+
+function countPeaks(positionData, threshold) {
+    let peakCount = 0;
+    let inPeak = false;
+    console.log(threshold);
+    for (let i = 1; i < positionData.length; i++) {
+        const positionDataY = positionData[i].y;
+
+        if (!inPeak && positionDataY > threshold) {
+            inPeak = true;
+            peakCount++;
+        } else if (inPeak && positionDataY < threshold) {
+            inPeak = false;
+        }
+    }
+
+    return peakCount;
+}
+
 
 function displayResult(original, result) {
     const ctx = document.getElementById('chart').getContext('2d');
@@ -191,7 +222,7 @@ function displayResult(original, result) {
                 },
                 {
                     label: 'Acceleration Magnitude',
-                    borderColor: 'rgb(0,191,255)',
+                    borderColor: 'rgb(0,191,255)ข ขช ',
                     fill: false,
                     data: accelerationMagnitudeData
                 }

@@ -18,11 +18,14 @@ document.getElementById('gyroProcessButton').addEventListener('click', function(
         alert('Please upload a CSV file first.');
         return;
     }
-
-    const threshold = parseFloat(document.getElementById('gyroThresholdInput').value);
+    //const threshold = parseFloat(document.getElementById('gyroThresholdInput').value);
     const result = integrateGyro(gyroData);
     displayGyroResult(gyroData, result);
-    const movementCount = countGyroMovements(result.angle, threshold);
+    // const movementCount = countGyroMovements(result.angle, threshold);
+    const multiplier = 2; // Adjust this multiplier based on your data characteristics
+    const threshold = calculateThreshold(result.angle, multiplier);
+    console.log(threshold);
+    const movementCount = countMovements(result.angle, threshold);
     document.getElementById('gyroMovementCount').innerText = 'Movement Count: ' + movementCount;
 });
 
@@ -52,29 +55,62 @@ function integrateGyro(gyroData) {
     return { angle };
 }
 
-function countGyroMovements(angleData, threshold) {
+// function countGyroMovements(angleData, threshold) {
+//     let movementCount = 0;
+//     let inMotion = false;
+//     let lastAngle = { x: 0, y: 0, z: 0 };
+
+//     for (let i = 1; i < angleData.length; i++) {
+//         const angularDisplacement = Math.sqrt(
+//             Math.pow(angleData[i].x - lastAngle.x, 2) +
+//             Math.pow(angleData[i].y - lastAngle.y, 2) +
+//             Math.pow(angleData[i].z - lastAngle.z, 2)
+//         );
+
+//         if (!inMotion && angularDisplacement > threshold) {
+//             inMotion = true;
+//         } else if (inMotion && angularDisplacement < threshold) {
+//             inMotion = false;
+//             movementCount++;
+//         }
+//         lastAngle = angleData[i];
+//     }
+//     console.log(movementCount);
+//     return movementCount;
+// }
+
+function calculateThreshold(accelerationData, multiplier) {
+    const slopes = accelerationData.map((acc, i, arr) => i > 0 ? Math.abs(acc.y - arr[i - 1].y) : 0).slice(1);
+    const meanSlope = slopes.reduce((sum, slope) => sum + slope, 0) / slopes.length;
+    const stdDevSlope = Math.sqrt(slopes.map(x => Math.pow(x - meanSlope, 2)).reduce((sum, x) => sum + x, 0) / slopes.length);
+    return stdDevSlope * multiplier;
+}
+
+function countMovements(angle, threshold) {
+
+    // Now, detect local minima in the Angle Y data
     let movementCount = 0;
-    let inMotion = false;
-    let lastAngle = { x: 0, y: 0, z: 0 };
+    let descending = false;
+    // console.log(angle)
+    for (let i = 1; i < angle.length - 1; i++) {
+        // Calculate the slope
+        const slope = angle[i].y - angle[i - 1].y;
 
-    for (let i = 1; i < angleData.length; i++) {
-        const angularDisplacement = Math.sqrt(
-            Math.pow(angleData[i].x - lastAngle.x, 2) +
-            Math.pow(angleData[i].y - lastAngle.y, 2) +
-            Math.pow(angleData[i].z - lastAngle.z, 2)
-        );
-
-        if (!inMotion && angularDisplacement > threshold) {
-            inMotion = true;
-        } else if (inMotion && angularDisplacement < threshold) {
-            inMotion = false;
-            movementCount++;
+        // Check for significant downward trend
+        if (slope < -threshold) {
+            descending = true;
         }
-        lastAngle = angleData[i];
+
+        // Check for valley (significant local minimum)
+        if (descending && slope > threshold) {
+            movementCount += 1;
+            descending = false;
+        }
     }
 
     return movementCount;
 }
+
 
 function displayGyroResult(original, result) {
     const ctx = document.getElementById('gyroChart').getContext('2d');
